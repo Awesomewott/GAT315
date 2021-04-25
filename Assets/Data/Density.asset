@@ -10,6 +10,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 80d98fbcc2661a24aa7da680c8d900e2, type: 3}
-  m_Name: Speed
+  m_Name: Density
   m_EditorClassIdentifier: 
   value: 0

@@ -6,4 +6,7 @@ using UnityEngine;
 public class BoolData : ScriptableObject
 {
     public bool value;
+
+    public static implicit operator bool(BoolData data) { return data.value; }
+
 }
