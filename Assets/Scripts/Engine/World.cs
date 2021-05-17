@@ -12,6 +12,7 @@ public class World : MonoBehaviour
     public FloatData gravitation;
     public FloatData fixedFPS;
     public StringData fpsText;
+    public VectorField vectorField;
     public TMP_Text valueText = null;
 
     private Vector2 size;
@@ -27,15 +28,24 @@ public class World : MonoBehaviour
 
     public Vector2 Gravity { get { return new Vector2(0, gravity.value); } }
     public List<Body> bodies { get; set; } = new List<Body>();
+    public List<Spring> springs { get; set; } = new List<Spring>();
+    public List<Force> forces { get; set; } = new List<Force>();
+
+    BroadPhase broadPhase = new QuadTree();
+    public AABB AABB { get => aabb; }
+
+    AABB aabb;
 
     private void Awake()
     {
         instance = this;
         size = Camera.main.ViewportToWorldPoint(Vector2.one);
+        aabb = new AABB(Vector2.zero, size * 2);
     }
 
     void Update()
     {
+        springs.ForEach(spring => spring.Draw());
         if (!simulate.value)
         {
             return;
@@ -45,10 +55,13 @@ public class World : MonoBehaviour
         fpsAverage = (fpsAverage * smoothing) + (fps * (1 - smoothing));
         valueText.text = fixedFPS.value.ToString("F2");
 
-
         timeAccumaltor += Time.deltaTime;
 
+        //forces 
         GravatationalForce.ApplyForce(bodies, gravitation.value);
+        forces.ForEach(force => bodies.ForEach(body => force.ApplyForce(body)));
+        springs.ForEach(spring => spring.ApplyForce());
+        bodies.ForEach(body => vectorField.ApplyForce(body));
 
         while (timeAccumaltor > fixedDeltaTime) 
         {
@@ -58,14 +71,16 @@ public class World : MonoBehaviour
 
            if(collision == true)
             {
+                bodies.ForEach(body => body.shape.color = Color.green);
+                broadPhase.Build(aabb, bodies);
+
                 Collison.CreateContacts(bodies, out List<Contact> contacts);
                 contacts.ForEach(contact => { contact.bodyA.shape.color = Color.red; contact.bodyB.shape.color = Color.red; });
                 ContactSolver.Resolve(contacts);
             }
-
-
             timeAccumaltor = timeAccumaltor - fixedDeltaTime; 
         }
+        broadPhase.Draw();
 
         if (wrap) 
         { 
@@ -74,7 +89,5 @@ public class World : MonoBehaviour
 
         bodies.ForEach(body => body.force = Vector2.zero);
         bodies.ForEach(body => body.acceleration = Vector2.zero);
-
-        //Debug.Log(1.0f / Time.deltaTime);
     }
 }
