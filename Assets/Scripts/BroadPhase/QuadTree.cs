@@ -16,12 +16,13 @@ public class QuadTree : BroadPhase
 
     public override void Query(AABB aabb, List<Body> bodies)
     {
-        throw new System.NotImplementedException();
+        rootNode.Query(aabb, bodies);
+        potientialCollisionCount = potientialCollisionCount + bodies.Count;
     }
 
     public override void Query(Body body, List<Body> bodies)
     {
-        throw new System.NotImplementedException();
+        Query(body.shape.aABB, bodies);
     }
     public override void Draw()
     {

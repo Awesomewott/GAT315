@@ -8,12 +8,19 @@ public class World : MonoBehaviour
     public BoolData simulate;
     public BoolData collision;
     public BoolData wrap;
+    public BoolData debugCollision;
+
     public FloatData gravity;
     public FloatData gravitation;
     public FloatData fixedFPS;
     public StringData fpsText;
+    public BroadPhaseTypeData broadPhaseType;
     public VectorField vectorField;
     public TMP_Text valueText = null;
+    public StringData collisionText;
+
+    BroadPhase broadPhase;
+    BroadPhase[] broadPhases = { new NullBroadPhase(), new QuadTree(), new BVH() };
 
     private Vector2 size;
     float fps = 0;
@@ -31,7 +38,6 @@ public class World : MonoBehaviour
     public List<Spring> springs { get; set; } = new List<Spring>();
     public List<Force> forces { get; set; } = new List<Force>();
 
-    BroadPhase broadPhase = new QuadTree();
     public AABB AABB { get => aabb; }
 
     AABB aabb;
@@ -45,6 +51,7 @@ public class World : MonoBehaviour
 
     void Update()
     {
+        broadPhase = broadPhases[broadPhaseType.index];
         springs.ForEach(spring => spring.Draw());
         if (!simulate.value)
         {
@@ -67,21 +74,31 @@ public class World : MonoBehaviour
         {
             bodies.ForEach(body => body.Step(fixedDeltaTime));
             bodies.ForEach(body => Intergrator.SemiEular(body, fixedDeltaTime));//ExplicitEuler(body, dt));
-            bodies.ForEach(body => body.shape.color = Color.green);
 
-           if(collision == true)
+           if(collision)
             {
                 bodies.ForEach(body => body.shape.color = Color.green);
                 broadPhase.Build(aabb, bodies);
 
-                Collison.CreateContacts(bodies, out List<Contact> contacts);
-                contacts.ForEach(contact => { contact.bodyA.shape.color = Color.red; contact.bodyB.shape.color = Color.red; });
+                Collison.CreateBroadPhaseContacts(broadPhase, bodies, out List<Contact> contacts);
+                Collison.CreateNarrowPhaseContacts(ref contacts);
+                contacts.ForEach(contact => Collison.UpdateContactInfo(ref contact));
+
+                //Collison.CreateContacts(bodies, out List<Contact> contacts);
                 ContactSolver.Resolve(contacts);
+
+                contacts.ForEach(contact => { contact.bodyA.shape.color = Color.red; contact.bodyB.shape.color = Color.red; });
+
             }
+            //broadPhase.Draw();
             timeAccumaltor = timeAccumaltor - fixedDeltaTime; 
         }
-        broadPhase.Draw();
-
+        if (debugCollision)
+        {
+            broadPhase.Draw();
+        }
+        collisionText.value = "Broad Phase: " + BroadPhase.potientialCollisionCount.ToString();
+        
         if (wrap) 
         { 
             bodies.ForEach(body => body.position = Utilities.Wrap(body.position, -size, size));
